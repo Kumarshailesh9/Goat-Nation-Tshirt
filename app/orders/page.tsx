@@ -67,7 +67,7 @@ export default function MyOrdersPage() {
   if (loading) {
     return (
       <div className="h-screen flex items-center justify-center">
-        Loading your orders...
+         Loading your orders...
       </div>
     );
   }
@@ -145,7 +145,7 @@ export default function MyOrdersPage() {
               <div className="mt-4 flex justify-end">
                 <button
                   onClick={() =>
-                    router.push(`/track-order?id=${order.id}`)
+                    router.push(`/track-order/${order.id}`)
                   }
                   className="text-sm text-blue-600 hover:underline"
                 >

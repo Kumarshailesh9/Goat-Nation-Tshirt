@@ -111,7 +111,7 @@ const CheckoutPage = () => {
       localStorage.removeItem("buyNowProduct");
 
       // 🚀 REDIRECT
-      router.push(`/order-success?orderId=${docRef.id}`);
+      router.push(`/order-success/${docRef.id}`);
 
     } catch (error) {
       console.error("Order Error:", error);
