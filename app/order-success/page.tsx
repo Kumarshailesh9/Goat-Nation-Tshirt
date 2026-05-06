@@ -2,10 +2,18 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+
+export const dynamic = "force-dynamic"; // ✅ important
 
 const OrderSuccessPage = () => {
     const searchParams = useSearchParams();
-    const orderId = searchParams.get("orderId");
+    const [orderId, setOrderId] = useState<string | null>(null);
+
+    useEffect(() => {
+        const id = searchParams.get("orderId");
+        setOrderId(id);
+    }, [searchParams]);
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
@@ -39,7 +47,6 @@ const OrderSuccessPage = () => {
                     Track your order
                 </Link>
 
-                {/* BUTTON */}
                 <Link
                     href="/"
                     className="bg-black text-white px-6 py-3 rounded-lg inline-block hover:bg-gray-800 transition"
