@@ -4,7 +4,10 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { doc, getDoc } from "firebase/firestore";
+import { Heart } from "lucide-react";
+
 import { db } from "@/lib/firebase";
+import { useWishlist } from "@/app/hooks/useWishlist";
 
 type Product = {
   id: string;
@@ -27,6 +30,11 @@ export default function ProductDetailsPage() {
   const [selectedSize, setSelectedSize] = useState("");
 
   const thumbRef = useRef<HTMLDivElement | null>(null);
+
+  const {
+    isWishlisted,
+    toggleWishlist,
+  } = useWishlist(id as string);
 
   // ================= FETCH =================
   useEffect(() => {
@@ -69,62 +77,98 @@ export default function ProductDetailsPage() {
       size: selectedSize,
     };
 
-    localStorage.setItem("buyNowProduct", JSON.stringify(buyNowData));
+    localStorage.setItem(
+      "buyNowProduct",
+      JSON.stringify(buyNowData)
+    );
+
     router.push("/checkout");
   };
 
   // ================= THUMB SCROLL =================
   const scrollThumbLeft = () => {
-    thumbRef.current?.scrollBy({ left: -120, behavior: "smooth" });
+    thumbRef.current?.scrollBy({
+      left: -120,
+      behavior: "smooth",
+    });
   };
 
   const scrollThumbRight = () => {
-    thumbRef.current?.scrollBy({ left: 120, behavior: "smooth" });
+    thumbRef.current?.scrollBy({
+      left: 120,
+      behavior: "smooth",
+    });
   };
 
   // ================= IMAGE NAV =================
   const nextImage = () => {
     if (!product) return;
-    const i = product.images.indexOf(selectedImage);
-    setSelectedImage(product.images[(i + 1) % product.images.length]);
+
+    const i =
+      product.images.indexOf(selectedImage);
+
+    setSelectedImage(
+      product.images[
+        (i + 1) % product.images.length
+      ]
+    );
   };
 
   const prevImage = () => {
     if (!product) return;
-    const i = product.images.indexOf(selectedImage);
+
+    const i =
+      product.images.indexOf(selectedImage);
+
     setSelectedImage(
-      product.images[(i - 1 + product.images.length) % product.images.length]
+      product.images[
+        (i - 1 + product.images.length) %
+          product.images.length
+      ]
     );
   };
 
   // ================= SWIPE =================
   let touchStartX = 0;
 
-  const handleTouchStart = (e: React.TouchEvent) => {
+  const handleTouchStart = (
+    e: React.TouchEvent
+  ) => {
     touchStartX = e.touches[0].clientX;
   };
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    const endX = e.changedTouches[0].clientX;
+  const handleTouchEnd = (
+    e: React.TouchEvent
+  ) => {
+    const endX =
+      e.changedTouches[0].clientX;
 
-    if (touchStartX - endX > 50) nextImage();
-    if (endX - touchStartX > 50) prevImage();
+    if (touchStartX - endX > 50)
+      nextImage();
+
+    if (endX - touchStartX > 50)
+      prevImage();
   };
 
   if (!product) {
-    return <div className="p-6 text-center">Loading...</div>;
+    return (
+      <div className="p-6 text-center">
+        Loading...
+      </div>
+    );
   }
 
   const discount = Math.round(
-    ((product.mrp - product.price) / product.mrp) * 100
+    ((product.mrp - product.price) /
+      product.mrp) *
+      100
   );
 
   return (
     <div className="bg-gray-50 min-h-screen pb-20 md:pb-0">
-
       <div className="max-w-7xl mx-auto md:p-6 grid md:grid-cols-2 gap-6">
-
-        {/* ================= LEFT - PRO GALLERY ================= */}
+        
+        {/* ================= LEFT - GALLERY ================= */}
         <div className="bg-white md:rounded-xl md:p-4">
 
           {/* MAIN IMAGE */}
@@ -140,7 +184,23 @@ export default function ProductDetailsPage() {
               className="object-cover"
             />
 
-            {/* ARROWS */}
+            {/* WISHLIST BUTTON */}
+            <button
+              onClick={() =>
+                toggleWishlist(product)
+              }
+              className="absolute top-3 right-3 z-20 bg-white/90 backdrop-blur-md p-3 rounded-full shadow-lg"
+            >
+              <Heart
+                className={`w-6 h-6 transition-all duration-300 ${
+                  isWishlisted
+                    ? "fill-red-500 text-red-500 scale-110"
+                    : "text-gray-700"
+                }`}
+              />
+            </button>
+
+            {/* LEFT ARROW */}
             <button
               onClick={prevImage}
               className="hidden md:flex absolute left-2 top-1/2 -translate-y-1/2 bg-white px-3 py-1 rounded-full shadow"
@@ -148,6 +208,7 @@ export default function ProductDetailsPage() {
               ◀
             </button>
 
+            {/* RIGHT ARROW */}
             <button
               onClick={nextImage}
               className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 bg-white px-3 py-1 rounded-full shadow"
@@ -173,8 +234,10 @@ export default function ProductDetailsPage() {
               {product.images.map((img, i) => (
                 <div
                   key={i}
-                  onClick={() => setSelectedImage(img)}
-                  className={`relative min-w-[70px] h-[70px] border-2 rounded-lg cursor-pointer ${
+                  onClick={() =>
+                    setSelectedImage(img)
+                  }
+                  className={`relative min-w-[70px] h-[70px] border-2 rounded-lg cursor-pointer transition ${
                     selectedImage === img
                       ? "border-black scale-105"
                       : "border-gray-300"
@@ -211,10 +274,12 @@ export default function ProductDetailsPage() {
             <span className="text-xl md:text-3xl font-bold">
               ₹{product.price}
             </span>
+
             <span className="line-through text-gray-400">
               ₹{product.mrp}
             </span>
-            <span className="text-green-600">
+
+            <span className="text-green-600 font-medium">
               {discount}% OFF
             </span>
           </div>
@@ -222,51 +287,84 @@ export default function ProductDetailsPage() {
           {product.createdAt && (
             <p className="text-xs text-gray-500">
               Added on:{" "}
-              {new Date(product.createdAt.seconds * 1000).toLocaleDateString()}
+              {new Date(
+                product.createdAt.seconds *
+                  1000
+              ).toLocaleDateString()}
             </p>
           )}
 
           {/* SIZE */}
           <div>
-            <p className="text-sm mb-2 font-medium">Select Size</p>
-            <div className="flex gap-2 flex-wrap">
-              {product.sizeStock?.map((item) => (
-                <button
-                  key={item.size}
-                  disabled={item.qty === 0}
-                  onClick={() => setSelectedSize(item.size)}
-                  className={`px-3 py-1.5 border rounded ${
-                    selectedSize === item.size
-                      ? "bg-black text-white"
-                      : ""
-                  } ${item.qty === 0 && "opacity-40 cursor-not-allowed"}`}
-                >
-                  {item.size}
-                </button>
-              ))}
-            </div>
-          </div>
+            <p className="text-sm mb-2 font-medium">
+              Select Size
+            </p>
 
-          {/* HIGHLIGHTS */}
-          <div>
-            <h3 className="font-semibold mb-2">Highlights</h3>
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              {Object.entries(product.highlights || {}).map(
-                ([key, value]) => (
-                  <div key={key} className="flex justify-between">
-                    <span className="text-gray-500">{key}</span>
-                    <span>{value}</span>
-                  </div>
+            <div className="flex gap-2 flex-wrap">
+              {product.sizeStock?.map(
+                (item) => (
+                  <button
+                    key={item.size}
+                    disabled={
+                      item.qty === 0
+                    }
+                    onClick={() =>
+                      setSelectedSize(
+                        item.size
+                      )
+                    }
+                    className={`px-4 py-2 border rounded-lg transition ${
+                      selectedSize ===
+                      item.size
+                        ? "bg-black text-white"
+                        : "bg-white"
+                    } ${
+                      item.qty === 0 &&
+                      "opacity-40 cursor-not-allowed"
+                    }`}
+                  >
+                    {item.size}
+                  </button>
                 )
               )}
             </div>
           </div>
 
+          {/* HIGHLIGHTS */}
+          <div>
+            <h3 className="font-semibold mb-3">
+              Highlights
+            </h3>
+
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              {Object.entries(
+                product.highlights || {}
+              ).map(([key, value]) => (
+                <div
+                  key={key}
+                  className="flex justify-between border-b pb-2"
+                >
+                  <span className="text-gray-500">
+                    {key}
+                  </span>
+
+                  <span className="font-medium">
+                    {value}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* DESCRIPTION */}
           <div>
-            <h3 className="font-semibold mb-2">Product Details</h3>
-            <p className="text-gray-600 text-sm">
-              {product.description || "No description available"}
+            <h3 className="font-semibold mb-2">
+              Product Details
+            </h3>
+
+            <p className="text-gray-600 text-sm leading-6">
+              {product.description ||
+                "No description available"}
             </p>
           </div>
 
@@ -275,7 +373,7 @@ export default function ProductDetailsPage() {
             <button
               onClick={handleBuyNow}
               disabled={!selectedSize}
-              className="w-full bg-black text-white py-3 rounded-lg disabled:opacity-50"
+              className="w-full bg-black text-white py-3 rounded-lg disabled:opacity-50 hover:bg-gray-900 transition"
             >
               Buy Now
             </button>
@@ -294,7 +392,6 @@ export default function ProductDetailsPage() {
           Buy Now
         </button>
       </div>
-
     </div>
   );
 }

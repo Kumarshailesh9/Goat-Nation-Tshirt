@@ -1,40 +1,33 @@
 import {
-  createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   signOut,
-  User,
+  RecaptchaVerifier,
+  signInWithPhoneNumber,
 } from "firebase/auth";
 
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  setDoc,
+} from "firebase/firestore";
+
 import { auth, db } from "./firebase";
 
-type UserRole = "admin" | "customer";
-
-interface LoginResponse {
-  user: User;
-  role: UserRole;
-  token: string; // 🔥 JWT TOKEN
-}
-
-// 🔥 GET TOKEN HELPER
-export const getAuthToken = async (): Promise<string | null> => {
-  const user = auth.currentUser;
-  if (!user) return null;
-
-  return await user.getIdToken(); // JWT
-};
-
-// ✅ REGISTER
+// ================= REGISTER =================
 export const registerUser = async (
   name: string,
   email: string,
-  password: string
-): Promise<User> => {
-  const userCredential = await createUserWithEmailAndPassword(
-    auth,
-    email,
-    password
-  );
+  password: string,
+  phone: string
+) => {
+
+  const userCredential =
+    await createUserWithEmailAndPassword(
+      auth,
+      email,
+      password
+    );
 
   const user = userCredential.user;
 
@@ -42,52 +35,70 @@ export const registerUser = async (
     uid: user.uid,
     name,
     email,
-    role: "customer",
+    phone,
+    role: "user",
+    createdAt: new Date(),
   });
 
   return user;
 };
 
-// ✅ LOGIN (TOKEN INCLUDED)
+// ================= LOGIN =================
 export const loginUser = async (
   email: string,
   password: string
-): Promise<LoginResponse> => {
-  const userCredential = await signInWithEmailAndPassword(
-    auth,
-    email,
-    password
-  );
+) => {
+
+  const userCredential =
+    await signInWithEmailAndPassword(
+      auth,
+      email,
+      password
+    );
 
   const user = userCredential.user;
 
-  // 🔥 GET ROLE
-  const userDoc = await getDoc(doc(db, "users", user.uid));
-
-  const role = (userDoc.data()?.role as UserRole) || "customer";
-
-  // 🔥 GET JWT TOKEN
-  const token = await user.getIdToken();
-
-  // ⚠️ OPTIONAL (store non-sensitive)
-  localStorage.setItem(
-    "user",
-    JSON.stringify({
-      uid: user.uid,
-      email: user.email,
-      role,
-    })
+  const userDoc = await getDoc(
+    doc(db, "users", user.uid)
   );
 
-  return {
-    user,
-    role,
-    token,
-  };
+  const role =
+    userDoc.exists()
+      ? userDoc.data().role
+      : "user";
+
+  return { user, role };
 };
 
-// ✅ LOGOUT
-export const logoutUser = async (): Promise<void> => {
-  localStorage.removeItem("user"); // cleanup
+// ================= LOGOUT =================
+export const logoutUser = async () => {
   await signOut(auth);
+};
+
+// ================= RECAPTCHA =================
+export const setupRecaptcha = (
+  phoneNumber: string
+) => {
+
+  if (!(window as any).recaptchaVerifier) {
+
+    (window as any).recaptchaVerifier =
+      new RecaptchaVerifier(
+        auth,
+        "recaptcha-container",
+        {
+          size: "normal",
+          callback: () => {},
+        }
+      );
+  }
+
+  const appVerifier =
+    (window as any).recaptchaVerifier;
+
+  return signInWithPhoneNumber(
+    auth,
+    phoneNumber,
+    appVerifier
+  );
 };

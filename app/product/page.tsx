@@ -8,6 +8,9 @@ import { useRouter } from "next/navigation";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
+import { Heart } from "lucide-react";
+import { useWishlist } from "@/app/hooks/useWishlist";
+
 // ✅ Product type
 type Product = {
   id: string;
@@ -30,22 +33,28 @@ const Product = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const snapshot = await getDocs(collection(db, "products"));
+        const snapshot = await getDocs(
+          collection(db, "products")
+        );
 
-        const data: Product[] = snapshot.docs.map((doc) => {
-          const item: any = doc.data();
+        const data: Product[] = snapshot.docs.map(
+          (doc) => {
+            const item: any = doc.data();
 
-          return {
-            id: doc.id,
-            title: item.name,
-            image: item.images?.[0],
-            price: item.price,
-            mrp: item.mrp || item.price,
-          };
-        });
+            return {
+              id: doc.id,
+              title: item.name,
+              image: item.images?.[0] || "",
+              price: item.price,
+              mrp: item.mrp || item.price,
+            };
+          }
+        );
 
         setAllProducts(data);
-        setVisibleProducts(data.slice(0, ITEMS_PER_PAGE));
+        setVisibleProducts(
+          data.slice(0, ITEMS_PER_PAGE)
+        );
       } catch (err) {
         console.error(err);
       }
@@ -57,21 +66,36 @@ const Product = () => {
   // ✅ LOAD MORE
   const loadMore = () => {
     const nextPage = page + 1;
-    const start = (nextPage - 1) * ITEMS_PER_PAGE;
-    const newItems = allProducts.slice(start, start + ITEMS_PER_PAGE);
 
-    setVisibleProducts((prev) => [...prev, ...newItems]);
+    const start =
+      (nextPage - 1) * ITEMS_PER_PAGE;
+
+    const newItems = allProducts.slice(
+      start,
+      start + ITEMS_PER_PAGE
+    );
+
+    setVisibleProducts((prev) => [
+      ...prev,
+      ...newItems,
+    ]);
+
     setPage(nextPage);
   };
 
   // ✅ BUY NOW FUNCTION
-  const handleBuyNow = (product: Product) => {
+  const handleBuyNow = (
+    product: Product
+  ) => {
     const buyNowData = {
       ...product,
       qty: 1,
     };
 
-    localStorage.setItem("buyNowProduct", JSON.stringify(buyNowData));
+    localStorage.setItem(
+      "buyNowProduct",
+      JSON.stringify(buyNowData)
+    );
 
     router.push("/checkout");
   };
@@ -83,66 +107,18 @@ const Product = () => {
       <ul className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
 
         {visibleProducts.map((p) => (
-          <li key={p.id}>
-            <Link href={`/product/${p.id}`}>
-              <div className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition group cursor-pointer">
-
-                {/* IMAGE */}
-                <div className="relative bg-gray-100 aspect-square overflow-hidden">
-                  <Image
-                    src={p.image}
-                    alt={p.title}
-                    fill
-                    className="object-cover group-hover:scale-110 transition duration-300"
-                  />
-                </div>
-
-                {/* INFO */}
-                <div className="p-3 space-y-1">
-
-                  <h2 className="text-sm font-medium line-clamp-2">
-                    {p.title}
-                  </h2>
-
-                  {/* PRICE */}
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-black">
-                      ₹{p.price}
-                    </span>
-
-                    <span className="text-gray-400 line-through text-sm">
-                      ₹{p.mrp}
-                    </span>
-
-                    <span className="text-green-600 text-sm">
-                      {Math.round(
-                        ((p.mrp - p.price) / p.mrp) * 100
-                      )}
-                      % OFF
-                    </span>
-                  </div>
-
-                  {/* BUY NOW BUTTON */}
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleBuyNow(p);
-                    }}
-                    className="w-full mt-2 bg-black text-white py-2 rounded-lg text-sm hover:bg-gray-800 transition"
-                  >
-                    Buy Now
-                  </button>
-
-                </div>
-              </div>
-            </Link>
-          </li>
+          <ProductCard
+            key={p.id}
+            product={p}
+            handleBuyNow={handleBuyNow}
+          />
         ))}
 
       </ul>
 
       {/* LOAD MORE */}
-      {visibleProducts.length < allProducts.length && (
+      {visibleProducts.length <
+        allProducts.length && (
         <div className="flex justify-center mt-6">
           <button
             onClick={loadMore}
@@ -155,5 +131,101 @@ const Product = () => {
     </div>
   );
 };
+
+// ✅ PRODUCT CARD COMPONENT
+function ProductCard({
+  product,
+  handleBuyNow,
+}: {
+  product: Product;
+  handleBuyNow: (product: Product) => void;
+}) {
+
+  const {
+    isWishlisted,
+    toggleWishlist,
+  } = useWishlist(product.id);
+
+  return (
+    <li>
+      <Link href={`/product/${product.id}`}>
+        <div className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 group cursor-pointer relative">
+
+          {/* WISHLIST */}
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              toggleWishlist(product);
+            }}
+            className="absolute top-3 right-3 z-20 bg-white/90 backdrop-blur-md p-2 rounded-full shadow-lg"
+          >
+            <Heart
+              className={`w-5 h-5 transition-all duration-300 ${
+                isWishlisted
+                  ? "fill-red-500 text-red-500 scale-110"
+                  : "text-gray-700"
+              }`}
+            />
+          </button>
+
+          {/* IMAGE */}
+          <div className="relative bg-gray-100 aspect-square overflow-hidden">
+
+            <Image
+              src={product.image}
+              alt={product.title}
+              fill
+              className="object-cover group-hover:scale-110 transition duration-500"
+            />
+
+          </div>
+
+          {/* INFO */}
+          <div className="p-4 space-y-2">
+
+            <h2 className="text-sm font-medium line-clamp-2 min-h-[40px]">
+              {product.title}
+            </h2>
+
+            {/* PRICE */}
+            <div className="flex items-center gap-2 flex-wrap">
+
+              <span className="font-bold text-black text-lg">
+                ₹{product.price}
+              </span>
+
+              <span className="text-gray-400 line-through text-sm">
+                ₹{product.mrp}
+              </span>
+
+              <span className="text-green-600 text-sm font-medium">
+                {Math.round(
+                  ((product.mrp -
+                    product.price) /
+                    product.mrp) *
+                    100
+                )}
+                % OFF
+              </span>
+
+            </div>
+
+            {/* BUY NOW BUTTON */}
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                handleBuyNow(product);
+              }}
+              className="w-full mt-2 bg-black text-white py-2.5 rounded-xl text-sm hover:bg-gray-800 transition"
+            >
+              Buy Now
+            </button>
+
+          </div>
+        </div>
+      </Link>
+    </li>
+  );
+}
 
 export default Product;
